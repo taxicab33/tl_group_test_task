@@ -2,3 +2,5 @@
 Запуск: docker-compose up --build
 
 Документация swagger: /docs
+Необходимо запустить docker-compose, прежде чем чатиться с ботом
+ТГ бот: https://t.me/tl_group_test_bot
