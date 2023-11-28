@@ -1,0 +1,4 @@
+В .env файлах можно указать свои ключи
+Запуск: docker-compose up --build
+
+Документация swagger: /docs
