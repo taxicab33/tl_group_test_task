@@ -24,7 +24,7 @@ def start(message):
     bot.send_message(
         message.chat.id,
         "Привет! Я бот, который может помочь узнать погоду. Напиши город, который тебе интересен"
-        "и нажми кнопку BUTTON_NAME",
+        f"и нажми кнопку {BUTTON_NAME}",
         reply_markup=markup
     )
 
