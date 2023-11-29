@@ -1,3 +1,4 @@
+import json
 import os
 from datetime import datetime
 import requests
@@ -39,14 +40,23 @@ def set_user_current_city(message: Message) -> None:
         get_weather(message)
 
 
-def get_user_current_city(user_id) -> str or None:
+def get_user_current_city(user_id) -> str | None:
     """Получаем город, который указал юзер"""
     with RedisContextManager() as cache:
         return cache.get(user_id)
 
 
+def get_city_cached_weather(city) -> dict | None:
+    key = (':1:' + f'{city}_weather').encode()
+    with RedisContextManager() as cache:
+        return cache.get(key)
+
+
 def get_weather_data(city) -> dict | int:
     """Получаем данные о погоде"""
+    cached_data = get_city_cached_weather(city)
+    if cached_data:
+        return cached_data
     response = requests.get(f'http://backend/weather?city={city}')
     match response.status_code:
         case 200:
@@ -65,6 +75,8 @@ def get_weather(message: Message) -> None:
         weather_data = None
         if city:
             weather_data = get_weather_data(city)
+        if isinstance(weather_data, str):
+            weather_data = json.loads(weather_data)
         match weather_data:
             case dict():
                 message_to_send = (f'Прогноз погоды для {city} на {formatted_time}\n'

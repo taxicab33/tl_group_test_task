@@ -113,6 +113,7 @@ CACHES = {
         'LOCATION': REDIS_URL,
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SERIALIZER': 'weather.serializers.JSONSerializer'
         }
     }
 }
