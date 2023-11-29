@@ -56,6 +56,8 @@ def get_weather_data(city) -> dict | int:
     """Получаем данные о погоде"""
     cached_data = get_city_cached_weather(city)
     if cached_data:
+        if isinstance(cached_data, str):
+            return json.loads(cached_data)
         return cached_data
     response = requests.get(f'http://backend/weather?city={city}')
     match response.status_code:
@@ -75,8 +77,6 @@ def get_weather(message: Message) -> None:
         weather_data = None
         if city:
             weather_data = get_weather_data(city)
-        if isinstance(weather_data, str):
-            weather_data = json.loads(weather_data)
         match weather_data:
             case dict():
                 message_to_send = (f'Прогноз погоды для {city} на {formatted_time}\n'
