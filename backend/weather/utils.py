@@ -39,15 +39,15 @@ class CityWeatherGetter:
             raise CityNotFoundException
         data = response.json()
 
-        response = data.pop('response', None)
-        geo_object_collection = response.pop('GeoObjectCollection', None) if response else None
-        feature_member = geo_object_collection.pop('featureMember', None) if geo_object_collection else None
-        geo_object = feature_member[0].pop('GeoObject', None) \
+        response = data.get('response', None)
+        geo_object_collection = response.get('GeoObjectCollection', None) if response else None
+        feature_member = geo_object_collection.get('featureMember', None) if geo_object_collection else None
+        geo_object = feature_member[0].get('GeoObject', None) \
             if feature_member and isinstance(feature_member, list) else None
         if not geo_object:
             raise CityNotFoundException
-        point = geo_object.pop('Point', None) if geo_object else None
-        pos = point.pop('pos', None) if point else None
+        point = geo_object.get('Point', None) if geo_object else None
+        pos = point.get('pos', None) if point else None
 
         longitude, latitude = map(float, pos.split())
         data = {
