@@ -3,20 +3,16 @@ import os
 from datetime import datetime
 import requests
 from telebot import TeleBot
-from telebot.types import (
-    Message,
-    KeyboardButton,
-    ReplyKeyboardMarkup
-)
+from telebot.types import Message, KeyboardButton, ReplyKeyboardMarkup
 
 from cache import RedisContextManager
 
-bot = TeleBot(token=os.getenv('TELEGRAM_TOKEN', None))
+bot = TeleBot(token=os.getenv("TELEGRAM_TOKEN", None))
 
-BUTTON_NAME = 'Узнать погоду'
+BUTTON_NAME = "Узнать погоду"
 
 
-@bot.message_handler(commands=['start'])
+@bot.message_handler(commands=["start"])
 def start(message):
     markup = ReplyKeyboardMarkup(resize_keyboard=True)
     button = KeyboardButton("Узнать погоду")
@@ -26,11 +22,11 @@ def start(message):
         message.chat.id,
         "Привет! Я бот, который может помочь узнать погоду. Напиши город, который тебе интересен"
         f"и нажми кнопку {BUTTON_NAME}",
-        reply_markup=markup
+        reply_markup=markup,
     )
 
 
-@bot.message_handler(func=lambda message: True, content_types=['text'])
+@bot.message_handler(func=lambda message: True, content_types=["text"])
 def set_user_current_city(message: Message) -> None:
     """Сохраняем город, который указал юзер"""
     if message.text != BUTTON_NAME:
@@ -47,7 +43,7 @@ def get_user_current_city(user_id) -> str | None:
 
 
 def get_city_cached_weather(city) -> dict | None:
-    key = (':1:' + f'{city}_weather').encode()
+    key = (":1:" + f"{city}_weather").encode()
     with RedisContextManager() as cache:
         return cache.get(key)
 
@@ -59,7 +55,7 @@ def get_weather_data(city) -> dict | int:
         if isinstance(cached_data, str):
             return json.loads(cached_data)
         return cached_data
-    response = requests.get(f'http://backend/weather?city={city}')
+    response = requests.get(f"http://backend/weather?city={city}")
     match response.status_code:
         case 200:
             weather_data = response.json()
@@ -79,20 +75,21 @@ def get_weather(message: Message) -> None:
             weather_data = get_weather_data(city)
         match weather_data:
             case dict():
-                message_to_send = (f'Прогноз погоды для {city} на {formatted_time}\n'
-                                   f'Температура: {weather_data.get("temp", None)}\n'
-                                   f'Атмосферное давление: {weather_data.get("pressure_mm", None)} мм рт.ст.\n'
-                                   f'Скорость ветра: {weather_data.get("wind_speed", None)} м/сек')
+                message_to_send = (
+                    f"Прогноз погоды для {city} на {formatted_time}\n"
+                    f'Температура: {weather_data.get("temp", None)}\n'
+                    f'Атмосферное давление: {weather_data.get("pressure_mm", None)} мм рт.ст.\n'
+                    f'Скорость ветра: {weather_data.get("wind_speed", None)} м/сек'
+                )
             case 404:
-                message_to_send = 'Такого города не существует :('
+                message_to_send = "Такого города не существует :("
             case 403:
-                message_to_send = 'На данный момент погода не известна, так как сервис не отвечает :('
+                message_to_send = (
+                    "На данный момент погода не известна, так как сервис не отвечает :("
+                )
             case _:
-                message_to_send = 'Пожалуйста, укажите город :('
-        bot.send_message(
-            message.chat.id,
-            message_to_send
-        )
+                message_to_send = "Пожалуйста, укажите город :("
+        bot.send_message(message.chat.id, message_to_send)
 
 
 bot.infinity_polling()

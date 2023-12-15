@@ -3,10 +3,7 @@ import redis
 
 class RedisContextManager:
     def __enter__(self):
-        self.redis_client = redis.StrictRedis(
-            host='redis',
-            decode_responses=True
-        )
+        self.redis_client = redis.StrictRedis(host="redis", decode_responses=True)
         return self.redis_client
 
     def __exit__(self, exc_type, exc_value, traceback):

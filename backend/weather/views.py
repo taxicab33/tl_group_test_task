@@ -8,18 +8,17 @@ from weather.utils import CityWeatherGetter
 @extend_schema(
     parameters=[
         OpenApiParameter(
-            name='city',
+            name="city",
             type=str,
             location=OpenApiParameter.QUERY,
             required=True,
-            description='Название города'
+            description="Название города",
         )
     ],
 )
 class CityWeatherRetrieveAPIView(GenericAPIView):
-
     def get(self, *args, **kwargs):
-        city_name = self.request.query_params.get('city', None)
+        city_name = self.request.query_params.get("city", None)
         if not city_name:
             raise CityWasNotProvidedException
         city = CityWeatherGetter(city_name)
