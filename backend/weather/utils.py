@@ -3,14 +3,10 @@ from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from weather.exceptions import CityNotFoundException
 from django.core.cache import cache
-from backend.settings import (
-    YANDEX_GEOCODER_API_KEY,
-    YANDEX_WEATHER_API_KEY
-)
+from backend.settings import YANDEX_GEOCODER_API_KEY, YANDEX_WEATHER_API_KEY
 
 
 class CityWeatherGetter:
-
     def __init__(self, city):
         self.city = city
 
@@ -18,10 +14,10 @@ class CityWeatherGetter:
         return self.city
 
     def __get_cached_city_cords(self) -> dict:
-        return cache.get(f'{self.city}_cords')
+        return cache.get(f"{self.city}_cords")
 
     def __cache_city_cords(self, value: dict) -> None:
-        cache.set(f'{self.city}_cords', value=value)
+        cache.set(f"{self.city}_cords", value=value)
 
     def _get_coordinates(self) -> dict:
         cached_cords = self.__get_cached_city_cords()
@@ -39,32 +35,38 @@ class CityWeatherGetter:
             raise CityNotFoundException
         data = response.json()
 
-        response = data.get('response', None)
-        geo_object_collection = response.get('GeoObjectCollection', None) if response else None
-        feature_member = geo_object_collection.get('featureMember', None) if geo_object_collection else None
-        geo_object = feature_member[0].get('GeoObject', None) \
-            if feature_member and isinstance(feature_member, list) else None
+        response = data.get("response", None)
+        geo_object_collection = (
+            response.get("GeoObjectCollection", None) if response else None
+        )
+        feature_member = (
+            geo_object_collection.get("featureMember", None)
+            if geo_object_collection
+            else None
+        )
+        geo_object = (
+            feature_member[0].get("GeoObject", None)
+            if feature_member and isinstance(feature_member, list)
+            else None
+        )
         if not geo_object:
             raise CityNotFoundException
-        point = geo_object.get('Point', None) if geo_object else None
-        pos = point.get('pos', None) if point else None
+        point = geo_object.get("Point", None) if geo_object else None
+        pos = point.get("pos", None) if point else None
 
         longitude, latitude = map(float, pos.split())
-        data = {
-            'lon': longitude,
-            'lat': latitude
-        }
+        data = {"lon": longitude, "lat": latitude}
         self.__cache_city_cords(data)
         return data
 
     def __get_cached_city_weather(self) -> dict:
-        return cache.get(f'{self.city}_weather')
+        return cache.get(f"{self.city}_weather")
 
     def __cache_city_weather(self, value: dict, timeout: int = None) -> None:
         """Кэшируем данные о погоде в городе на 30 минут"""
         if not timeout:
             timeout = 60 * 30
-        cache.set(f'{self.city}_weather', value=value, timeout=timeout)
+        cache.set(f"{self.city}_weather", value=value, timeout=timeout)
 
     def get_weather(self) -> dict:
         base_url = "https://api.weather.yandex.ru/v2/informers"
@@ -75,23 +77,21 @@ class CityWeatherGetter:
         if weather:
             return weather
         cords = self._get_coordinates()
-        lat = cords.get('lat', None)
-        lon = cords.get('lon', None)
+        lat = cords.get("lat", None)
+        lon = cords.get("lon", None)
         response = requests.get(
-            f"{base_url}?lat={lat}&lon={lon}&lang=ru_RU",
-            headers=headers
+            f"{base_url}?lat={lat}&lon={lon}&lang=ru_RU", headers=headers
         )
         match response.status_code:
             case status.HTTP_200_OK:
                 data = response.json()
-                fact = data.pop('fact', None)
+                fact = data.pop("fact", None)
                 display_data = {
-                    'temp': fact.get('temp', None),
-                    'pressure_mm': fact.get('pressure_mm', None),
-                    'wind_speed': fact.get('wind_speed', None)
+                    "temp": fact.get("temp", None),
+                    "pressure_mm": fact.get("pressure_mm", None),
+                    "wind_speed": fact.get("wind_speed", None),
                 }
                 self.__cache_city_weather(value=display_data)
                 return display_data
             case status.HTTP_403_FORBIDDEN:
                 raise PermissionDenied
-
