@@ -1,33 +1,37 @@
 import requests
+from django.core.cache import cache
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
-from weather.exceptions import CityNotFoundException
-from django.core.cache import cache
+
 from backend.settings import YANDEX_GEOCODER_API_KEY, YANDEX_WEATHER_API_KEY
+from weather.exceptions import CityNotFoundException
 
 
-class CityWeatherGetter:
-    def __init__(self, city):
-        self.city = city
+class YandexGeocoderClient:
 
-    def __str__(self):
-        return self.city
+    def __init__(
+            self,
+            geocoder_api_key
+    ):
+        self._geocoder_api_key = geocoder_api_key
 
-    def __get_cached_city_cords(self) -> dict:
-        return cache.get(f"{self.city}_cords")
+    @staticmethod
+    def _get_cached_city_cords(city_name: str) -> dict:
+        return cache.get(f"{city_name}_cords")
 
-    def __cache_city_cords(self, value: dict) -> None:
-        cache.set(f"{self.city}_cords", value=value)
+    @staticmethod
+    def _cache_city_cords(city_name, value: dict) -> None:
+        cache.set(f"{city_name}_cords", value=value)
 
-    def _get_coordinates(self) -> dict:
-        cached_cords = self.__get_cached_city_cords()
+    def get_coordinates(self, city_name: str) -> dict:
+        cached_cords = self._get_cached_city_cords(city_name)
         if cached_cords:
             return cached_cords
         base_url = "https://geocode-maps.yandex.ru/1.x/"
         params = {
-            "apikey": YANDEX_GEOCODER_API_KEY,
+            "apikey": self._geocoder_api_key,
             "format": "json",
-            "geocode": self.city,
+            "geocode": city_name,
         }
 
         response = requests.get(base_url, params=params)
@@ -56,27 +60,37 @@ class CityWeatherGetter:
 
         longitude, latitude = map(float, pos.split())
         data = {"lon": longitude, "lat": latitude}
-        self.__cache_city_cords(data)
+        self._cache_city_cords(city_name=city_name, value=data)
         return data
 
-    def __get_cached_city_weather(self) -> dict:
-        return cache.get(f"{self.city}_weather")
 
-    def __cache_city_weather(self, value: dict, timeout: int = None) -> None:
+class YandexWeatherClient:
+    def __init__(
+            self,
+            weather_api_key
+    ):
+        self._weather_api_key = weather_api_key
+
+    @staticmethod
+    def _get_cached_city_weather(city_name: str) -> dict:
+        return cache.get(f"{city_name}_weather")
+
+    @staticmethod
+    def _cache_city_weather(city_name, value: dict, timeout: int = None) -> None:
         """Кэшируем данные о погоде в городе на 30 минут"""
         if not timeout:
             timeout = 60 * 30
-        cache.set(f"{self.city}_weather", value=value, timeout=timeout)
+        cache.set(f"{city_name}_weather", value=value, timeout=timeout)
 
-    def get_weather(self) -> dict:
+    def get_weather(self, city_name: str) -> dict:
         base_url = "https://api.weather.yandex.ru/v2/informers"
         headers = {
-            "X-Yandex-API-Key": YANDEX_WEATHER_API_KEY,
+            "X-Yandex-API-Key": self._weather_api_key,
         }
-        weather = self.__get_cached_city_weather()
+        weather = self._get_cached_city_weather(city_name=city_name)
         if weather:
             return weather
-        cords = self._get_coordinates()
+        cords = yandex_geocoder_client.get_coordinates(city_name=city_name)
         lat = cords.get("lat", None)
         lon = cords.get("lon", None)
         response = requests.get(
@@ -91,7 +105,15 @@ class CityWeatherGetter:
                     "pressure_mm": fact.get("pressure_mm", None),
                     "wind_speed": fact.get("wind_speed", None),
                 }
-                self.__cache_city_weather(value=display_data)
+                self._cache_city_weather(value=display_data, city_name=city_name)
                 return display_data
             case status.HTTP_403_FORBIDDEN:
                 raise PermissionDenied
+
+
+yandex_geocoder_client = YandexGeocoderClient(
+    geocoder_api_key=YANDEX_GEOCODER_API_KEY,
+)
+yandex_weather_client = YandexWeatherClient(
+    weather_api_key=YANDEX_WEATHER_API_KEY
+)
