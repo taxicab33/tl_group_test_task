@@ -12,4 +12,5 @@ RUN pip install -r requirements.txt
 
 COPY . /backend
 
-CMD gunicorn backend.wsgi:application --bind 0.0.0.0:80 --workers=4
+CMD python manage.py migrate \
+    && gunicorn backend.wsgi:application --bind 0.0.0.0:80 --workers=4
